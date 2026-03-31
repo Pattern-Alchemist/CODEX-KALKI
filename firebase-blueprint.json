@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user-specific settings, progress, and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "displayName": { "type": "string", "description": "The user's public name." },
+        "email": { "type": "string", "description": "The user's email address." },
+        "role": { "type": "string", "enum": ["seeker", "adept", "admin"], "description": "The user's access level." },
+        "karmaPoints": { "type": "number", "description": "Total points earned through rituals and modules." },
+        "currentPath": { "type": "string", "description": "The current spiritual path the user is following." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["uid", "role", "karmaPoints"]
+    },
+    "RitualLog": {
+      "title": "Ritual Log",
+      "description": "A record of a completed ritual by a user.",
+      "type": "object",
+      "properties": {
+        "ritualId": { "type": "string", "description": "ID of the ritual performed." },
+        "userId": { "type": "string", "description": "ID of the user who performed it." },
+        "completedAt": { "type": "string", "format": "date-time", "description": "When the ritual was completed." },
+        "notes": { "type": "string", "description": "Optional notes from the user." }
+      },
+      "required": ["ritualId", "userId", "completedAt"]
+    },
+    "ModuleProgress": {
+      "title": "Module Progress",
+      "description": "Tracks progress in a specific esoteric module.",
+      "type": "object",
+      "properties": {
+        "moduleId": { "type": "string", "description": "ID of the module." },
+        "userId": { "type": "string", "description": "ID of the user." },
+        "progress": { "type": "number", "description": "Percentage completion (0-100)." },
+        "lastAccessed": { "type": "string", "format": "date-time", "description": "When the user last opened this module." }
+      },
+      "required": ["moduleId", "userId", "progress"]
+    },
+    "CoachMessage": {
+      "title": "Coach Message",
+      "description": "A single message in the AI Coach chat history.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "ID of the user." },
+        "role": { "type": "string", "enum": ["user", "model"], "description": "Who sent the message." },
+        "text": { "type": "string", "description": "The content of the message." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the message was sent." }
+      },
+      "required": ["userId", "role", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/users/{userId}/rituals/{ritualLogId}": {
+      "schema": "RitualLog",
+      "description": "History of rituals performed by the user."
+    },
+    "/users/{userId}/modules/{moduleProgressId}": {
+      "schema": "ModuleProgress",
+      "description": "User progress in specific modules."
+    },
+    "/users/{userId}/coach_history/{messageId}": {
+      "schema": "CoachMessage",
+      "description": "Chat history with the AI Coach."
+    }
+  }
+}

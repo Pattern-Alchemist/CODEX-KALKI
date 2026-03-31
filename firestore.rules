@@ -1,0 +1,178 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    // Document ID: userId (matches auth.uid)
+    // Fields:
+    //   - uid: string (required, immutable) - The user's unique ID
+    //   - displayName: string (optional) - The user's public name
+    //   - email: string (optional) - The user's email address
+    //   - role: string (required) - Seeker, Adept, or Admin
+    //   - karmaPoints: number (required) - Total points earned
+    //   - currentPath: string (optional) - Current spiritual path
+    //   - createdAt: timestamp (optional, immutable) - Creation time
+    //
+    // Collection: /users/{userId}/rituals/{ritualLogId}
+    // Fields:
+    //   - ritualId: string (required) - ID of the ritual
+    //   - userId: string (required, immutable) - ID of the user
+    //   - completedAt: timestamp (required, immutable) - Completion time
+    //   - notes: string (optional) - User's notes
+    //
+    // Collection: /users/{userId}/modules/{moduleProgressId}
+    // Fields:
+    //   - moduleId: string (required) - ID of the module
+    //   - userId: string (required, immutable) - ID of the user
+    //   - progress: number (required) - Percentage completion
+    //   - lastAccessed: timestamp (optional) - Last access time
+    //
+    // Collection: /users/{userId}/coach_history/{messageId}
+    // Fields:
+    //   - userId: string (required, immutable) - ID of the user
+    //   - role: string (required, enum) - user or model
+    //   - text: string (required) - Message content
+    //   - timestamp: timestamp (required, immutable) - Message time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "kosmicsutra777@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'role', 'karmaPoints']) &&
+             hasOnlyAllowedFields(['uid', 'displayName', 'email', 'role', 'karmaPoints', 'currentPath', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.role in ['seeker', 'adept', 'admin'] &&
+             data.karmaPoints is number && data.karmaPoints >= 0 &&
+             isValidOptionalString('displayName', 1, 50) &&
+             isValidOptionalString('email', 5, 100) &&
+             isValidOptionalString('currentPath', 1, 50);
+    }
+
+    function isValidRitualLog(data) {
+      return hasRequiredFields(['ritualId', 'userId', 'completedAt']) &&
+             hasOnlyAllowedFields(['ritualId', 'userId', 'completedAt', 'notes']) &&
+             data.userId == request.auth.uid &&
+             data.ritualId is string && data.ritualId.size() > 0 &&
+             data.completedAt is timestamp &&
+             isValidOptionalString('notes', 0, 1000);
+    }
+
+    function isValidModuleProgress(data) {
+      return hasRequiredFields(['moduleId', 'userId', 'progress']) &&
+             hasOnlyAllowedFields(['moduleId', 'userId', 'progress', 'lastAccessed']) &&
+             data.userId == request.auth.uid &&
+             data.moduleId is string && data.moduleId.size() > 0 &&
+             data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+             (!( 'lastAccessed' in data ) || data.lastAccessed is timestamp);
+    }
+
+    function isValidCoachMessage(data) {
+      return hasRequiredFields(['userId', 'role', 'text', 'timestamp']) &&
+             hasOnlyAllowedFields(['userId', 'role', 'text', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.role in ['user', 'model'] &&
+             isValidString('text', 1, 5000) &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can read their own profile. Admins can read all.
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can create their own profile as 'seeker' or 'adept'. Admins can create any.
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) &&
+                      ( (isOwner(userId) && request.resource.data.role in ['seeker', 'adept']) || isAdmin() );
+
+      // Users can update their own profile, but cannot change their role or UID. Admins can update any.
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
+                      ( (isOwner(userId) && request.resource.data.role == resource.data.role &&
+                         areImmutableFieldsUnchanged(['uid', 'createdAt'])) || isAdmin() );
+
+      // Only admins can delete profiles.
+      allow delete: if isAdmin();
+
+      // Sub-collections
+      match /rituals/{ritualLogId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidRitualLog(request.resource.data);
+        allow update: if isOwner(userId) && isValidRitualLog(request.resource.data) &&
+                        areImmutableFieldsUnchanged(['userId', 'completedAt', 'ritualId']);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /modules/{moduleProgressId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidModuleProgress(request.resource.data);
+        allow update: if isOwner(userId) && isValidModuleProgress(request.resource.data) &&
+                        areImmutableFieldsUnchanged(['userId', 'moduleId']);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /coach_history/{messageId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidCoachMessage(request.resource.data);
+        allow update: if false; // Messages are immutable
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

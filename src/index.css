@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Cinzel", serif;
+
+  --color-mystic-dark: #050505;
+  --color-mystic-purple: #1a1a2e;
+  --color-mystic-gold: #c5a059;
+  --color-mystic-accent: #ff4e00;
+  --color-mystic-light: #e0d8d0;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-mystic-dark text-mystic-light font-sans antialiased selection:bg-mystic-gold selection:text-mystic-dark;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(197, 160, 89, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 0% 100%, rgba(26, 26, 46, 0.2) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl transition-all duration-500 hover:bg-white/10 hover:border-white/20;
+  }
+
+  .mystic-gradient {
+    @apply bg-gradient-to-br from-mystic-purple/20 via-mystic-dark to-mystic-gold/10;
+  }
+
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center gap-1 text-[8px] uppercase tracking-[0.2em] transition-all duration-300;
+  }
+
+  .bottom-nav-item.active {
+    @apply text-mystic-gold;
+  }
+
+  .bottom-nav-item:not(.active) {
+    @apply text-mystic-light/40;
+  }
+
+  .premium-button {
+    @apply relative overflow-hidden px-8 py-4 rounded-full font-display text-xs uppercase tracking-[0.2em] transition-all duration-500 active:scale-95;
+  }
+
+  .premium-button-primary {
+    @apply bg-mystic-gold text-mystic-dark shadow-[0_0_30px_rgba(197,160,89,0.3)] hover:shadow-[0_0_50px_rgba(197,160,89,0.5)] hover:scale-105;
+  }
+
+  .premium-button-outline {
+    @apply border border-mystic-gold/30 text-mystic-gold hover:bg-mystic-gold/10 hover:border-mystic-gold;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-mystic-dark;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 4s ease-in-out infinite;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+}

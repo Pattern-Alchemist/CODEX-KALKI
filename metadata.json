@@ -1,0 +1,5 @@
+{
+  "name": "AstroKalki Occult Mastery",
+  "description": "Premium AI-Powered Esoteric Knowledge Platform for Occultism, Astrology, and Spiritual Self-Mastery.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}
